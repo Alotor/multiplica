@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppState, Duration, SessionResult } from './lib/types'
+import type { AppState, Duration, GameMode, SessionResult } from './lib/types'
 import { getHighScore, loadState, saveState } from './lib/storage'
 import { setMuted } from './lib/audio'
 import { Background } from './components/Background'
@@ -16,6 +16,7 @@ export default function App() {
   const [state, setState] = useState<AppState>(loadState)
   const [screen, setScreen] = useState<Screen>('home')
   const [duration, setDuration] = useState<Duration>(state.settings.duration)
+  const [mode, setMode] = useState<GameMode>('mult')
   const [result, setResult] = useState<SessionResult | null>(null)
   // Forces a remount of Game so each session starts fresh.
   const [sessionId, setSessionId] = useState(0)
@@ -24,8 +25,9 @@ export default function App() {
     setMuted(!state.settings.sound)
   }, [state.settings.sound])
 
-  const startGame = (d: Duration) => {
+  const startGame = (d: Duration, m: GameMode) => {
     setDuration(d)
+    setMode(m)
     setSessionId((v) => v + 1)
     setScreen('game')
   }
@@ -57,13 +59,15 @@ export default function App() {
       )}
       {screen === 'history' && <History state={state} onBack={() => setScreen('home')} />}
       {screen === 'gallery' && <Gallery state={state} onBack={() => setScreen('home')} />}
-      {screen === 'game' && <Game key={sessionId} state={state} duration={duration} onFinish={finishGame} />}
+      {screen === 'game' && (
+        <Game key={sessionId} state={state} duration={duration} mode={mode} onFinish={finishGame} />
+      )}
       {screen === 'results' && result && (
         <Results
           state={state}
           result={result}
-          highScore={getHighScore(state, result.duration)}
-          onPlayAgain={() => startGame(result.duration)}
+          highScore={getHighScore(state, result.mode, result.duration)}
+          onPlayAgain={() => startGame(result.duration, result.mode)}
           onHome={() => setScreen('home')}
         />
       )}

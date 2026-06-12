@@ -1,5 +1,4 @@
-import type { AppState, Duration, FactStat } from './types'
-import { ALL_FACTS } from './facts'
+import type { AppState, Duration, FactStat, GameMode } from './types'
 
 const STORAGE_KEY = 'multiplica-state-v1'
 
@@ -11,9 +10,9 @@ export const HISTORY_LIMIT = 20
 
 export function defaultState(): AppState {
   return {
-    version: 1,
+    version: 2,
     facts: {},
-    highScores: {},
+    highScores: { mult: {}, addsub: {} },
     streak: { lastDay: '', count: 0 },
     settings: { sound: true, duration: 120 },
     totals: { sessions: 0, answered: 0, correct: 0 },
@@ -21,12 +20,26 @@ export function defaultState(): AppState {
   }
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/** v1 predates game modes: everything stored back then was multiplication. */
+function migrateV1(parsed: any): AppState {
+  return {
+    ...defaultState(),
+    ...parsed,
+    version: 2,
+    highScores: { mult: parsed.highScores ?? {}, addsub: {} },
+    history: ((parsed.history ?? []) as any[]).map((g) => ({ ...g, mode: 'mult' as GameMode })),
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultState()
     const parsed = JSON.parse(raw)
-    if (parsed?.version !== 1) return defaultState()
+    if (parsed?.version === 1) return migrateV1(parsed)
+    if (parsed?.version !== 2) return defaultState()
     return { ...defaultState(), ...parsed }
   } catch {
     return defaultState()
@@ -72,9 +85,6 @@ export function currentStreak(state: AppState, now = new Date()): number {
   return 0
 }
 
-export function getHighScore(state: AppState, duration: Duration): number {
-  return state.highScores[duration] ?? 0
+export function getHighScore(state: AppState, mode: GameMode, duration: Duration): number {
+  return state.highScores[mode][duration] ?? 0
 }
-
-/** Sanity check that the 36-fact pool is what stats iterate over. */
-export const TOTAL_FACTS = ALL_FACTS.length

@@ -20,7 +20,7 @@ function formatDate(at: number): string {
 }
 
 export function History({ state, onBack }: HistoryProps) {
-  const isRecord = (g: GameRecord) => g.score > 0 && g.score === state.highScores[g.duration]
+  const isRecord = (g: GameRecord) => g.score > 0 && g.score === state.highScores[g.mode][g.duration]
 
   return (
     <div className="screen history">
@@ -44,6 +44,7 @@ export function History({ state, onBack }: HistoryProps) {
               <div className="history-left">
                 <span className="history-date">{formatDate(g.at)}</span>
                 <span className="history-meta">
+                  <span className="history-mode">{g.mode === 'mult' ? '×' : '±'}</span> ·{' '}
                   <Icon name="timer" size="1em" /> {g.duration / 60} min · {g.correct} de {g.answered}
                 </span>
               </div>

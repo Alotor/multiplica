@@ -1,5 +1,5 @@
-import type { AppState, Fact, FactKey, FactStat } from './types'
-import { ALL_FACTS } from './facts'
+import type { AppState, Fact, FactKey, FactStat, GameMode } from './types'
+import { FACTS_FOR_MODE } from './facts'
 import { getFactStat, newFactStat } from './storage'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -75,6 +75,7 @@ function isHardForKid(fact: Fact, stat: FactStat): boolean {
  */
 export function pickNextFact(
   state: AppState,
+  mode: GameMode,
   elapsedFraction: number,
   recent: FactKey[],
   now: number
@@ -82,22 +83,24 @@ export function pickNextFact(
   const phase = phaseFor(elapsedFraction)
   const recentSet = new Set(recent.slice(-4))
 
-  const candidates: Candidate[] = ALL_FACTS.filter((f) => !recentSet.has(f.key)).map((fact) => {
-    const stat = state.facts[fact.key] ?? newFactStat()
-    let priority = Math.random() * 2 // variety
+  const candidates: Candidate[] = FACTS_FOR_MODE[mode]
+    .filter((f) => !recentSet.has(f.key))
+    .map((fact) => {
+      const stat = state.facts[fact.key] ?? newFactStat()
+      let priority = Math.random() * 2 // variety
 
-    const overdueDays = stat.dueAt <= now ? Math.min(5, (now - stat.dueAt) / DAY) : -3
-    priority += overdueDays
+      const overdueDays = stat.dueAt <= now ? Math.min(5, (now - stat.dueAt) / DAY) : -3
+      priority += overdueDays
 
-    priority += (MAX_STRENGTH - stat.strength) * 0.8 // weak facts first
-    if (stat.lastSeen === 0) priority += 1.5 // never seen: introduce it
+      priority += (MAX_STRENGTH - stat.strength) * 0.8 // weak facts first
+      if (stat.lastSeen === 0) priority += 1.5 // never seen: introduce it
 
-    const phaseMatch =
-      phase === 'core' ? isHardForKid(fact, stat) : isEasyForKid(fact, stat)
-    if (phaseMatch) priority += 6
+      const phaseMatch =
+        phase === 'core' ? isHardForKid(fact, stat) : isEasyForKid(fact, stat)
+      if (phaseMatch) priority += 6
 
-    return { fact, stat, priority }
-  })
+      return { fact, stat, priority }
+    })
 
   candidates.sort((x, y) => y.priority - x.priority)
   // Weighted pick among the top few so sessions don't feel scripted.

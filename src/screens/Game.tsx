@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { AppState, Duration, FactKey, SessionResult } from '../lib/types'
-import { FACTS_BY_KEY, presentFact } from '../lib/facts'
+import type { AppState, Duration, FactKey, GameMode, Op, SessionResult } from '../lib/types'
+import { FACTS_BY_KEY, OP_SYMBOL, presentFact } from '../lib/facts'
 import { pickNextFact, recordAnswer } from '../lib/scheduler'
 import { pointsFor } from '../lib/score'
 import { bumpStreak, getHighScore, HISTORY_LIMIT, saveState } from '../lib/storage'
@@ -13,6 +13,7 @@ import { bestScore, newlyUnlocked, randomUnlocked, type Animal } from '../lib/an
 interface GameProps {
   state: AppState
   duration: Duration
+  mode: GameMode
   onFinish: (result: SessionResult) => void
 }
 
@@ -20,6 +21,7 @@ interface Question {
   key: FactKey
   left: number
   right: number
+  op: Op
   isRetry: boolean
 }
 
@@ -34,7 +36,7 @@ const RETRY_GAP = 3
 // Answers slower than this earn half points and don't raise SRS strength.
 const SLOW_ANSWER_MS = 10000
 
-export function Game({ state, duration, onFinish }: GameProps) {
+export function Game({ state, duration, mode, onFinish }: GameProps) {
   const totalMs = duration * 1000
   const endAtRef = useRef(Date.now() + totalMs)
   const [timeLeft, setTimeLeft] = useState(totalMs)
@@ -69,29 +71,33 @@ export function Game({ state, duration, onFinish }: GameProps) {
       const [retry] = s.retries.splice(retryIdx, 1)
       const fact = FACTS_BY_KEY[retry.key]
       const { left, right } = presentFact(fact)
-      return { key: fact.key, left, right, isRetry: true }
+      return { key: fact.key, left, right, op: fact.op, isRetry: true }
     }
-    const fact = pickNextFact(state, elapsedFraction, s.recent, Date.now())
+    const fact = pickNextFact(state, mode, elapsedFraction, s.recent, Date.now())
     const { left, right } = presentFact(fact)
-    return { key: fact.key, left, right, isRetry: false }
+    return { key: fact.key, left, right, op: fact.op, isRetry: false }
   }
 
   const [question, setQuestion] = useState<Question>(makeQuestion)
-  const correctAnswer = useMemo(() => question.left * question.right, [question])
+  const correctAnswer = useMemo(() => {
+    if (question.op === 'x') return question.left * question.right
+    if (question.op === '+') return question.left + question.right
+    return question.left - question.right
+  }, [question])
 
   const finish = () => {
     const s = session.current
     if (s.finished) return
     s.finished = true
-    const prevHigh = getHighScore(state, duration)
+    const prevHigh = getHighScore(state, mode, duration)
     const prevBest = bestScore(state)
     const isNewHighScore = s.answered > 0 && s.score > prevHigh
-    if (isNewHighScore) state.highScores[duration] = s.score
+    if (isNewHighScore) state.highScores[mode][duration] = s.score
     const unlockedNow = newlyUnlocked(prevBest, bestScore(state))
     state.settings.duration = duration
     state.totals.sessions += 1
     state.history = [
-      { at: Date.now(), score: s.score, duration, correct: s.correct, answered: s.answered },
+      { at: Date.now(), score: s.score, duration, mode, correct: s.correct, answered: s.answered },
       ...state.history,
     ].slice(0, HISTORY_LIMIT)
     bumpStreak(state)
@@ -103,6 +109,7 @@ export function Game({ state, duration, onFinish }: GameProps) {
       bestStreak: s.bestStreak,
       isNewHighScore,
       duration,
+      mode,
       unlockedNow,
     })
   }
@@ -233,14 +240,14 @@ export function Game({ state, duration, onFinish }: GameProps) {
         </div>
 
         <div className="question">
-          {question.left} × {question.right}
+          {question.left} {OP_SYMBOL[question.op]} {question.right}
         </div>
 
         {feedback === 'wrong' ? (
           <div className="solution">
             <span className="solution-msg">{skipped ? 'La respuesta es...' : '¡Casi! Es...'}</span>
             <span className="solution-eq">
-              {question.left} × {question.right} = <strong>{correctAnswer}</strong>
+              {question.left} {OP_SYMBOL[question.op]} {question.right} = <strong>{correctAnswer}</strong>
             </span>
           </div>
         ) : (

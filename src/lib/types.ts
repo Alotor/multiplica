@@ -1,12 +1,23 @@
-// A "fact" is an unordered pair {a, b} with 2 <= a <= b <= 9.
-// Its key is "axb" with a <= b (e.g. "3x7" covers both 3×7 and 7×3).
+// A "fact" is a single thing to memorize, identified by its key:
+//  - multiplication: unordered pair {a, b}, key "axb" with a <= b
+//    (e.g. "3x7" covers both 3×7 and 7×3)
+//  - addition: unordered pair {a, b}, key "a+b" with a <= b
+//  - subtraction: ordered "m-s" (m is always the minuend)
 export type FactKey = string
+
+export type Op = 'x' | '+' | '-'
+
+/** Each game mode has its own fact pool, ranking and heatmap. */
+export type GameMode = 'mult' | 'addsub'
 
 export interface Fact {
   key: FactKey
+  /** First operand; for subtraction, the minuend. */
   a: number
+  /** Second operand; for subtraction, the subtrahend. */
   b: number
-  /** 1 = easy (2,5,9), 2 = medium (4,6), 3 = hard (3,7,8) */
+  op: Op
+  /** 1 = easy, 2 = medium, 3 = hard */
   difficulty: 1 | 2 | 3
 }
 
@@ -28,14 +39,15 @@ export interface GameRecord {
   at: number
   score: number
   duration: Duration
+  mode: GameMode
   correct: number
   answered: number
 }
 
 export interface AppState {
-  version: 1
+  version: 2
   facts: Record<FactKey, FactStat>
-  highScores: Partial<Record<Duration, number>>
+  highScores: Record<GameMode, Partial<Record<Duration, number>>>
   streak: { lastDay: string; count: number }
   settings: { sound: boolean; duration: Duration }
   totals: { sessions: number; answered: number; correct: number }
@@ -50,6 +62,7 @@ export interface SessionResult {
   bestStreak: number
   isNewHighScore: boolean
   duration: Duration
+  mode: GameMode
   /** Animals unlocked by this game's score */
   unlockedNow: import('./animals').Animal[]
 }

@@ -201,6 +201,39 @@ button {
   box-shadow: 0 2px 0 #15803d;
 }
 
+.mode-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.play-btn.mode-btn {
+  font-size: clamp(1.3rem, 5.5vw, 1.7rem);
+  padding: 14px 36px;
+  justify-content: flex-start;
+}
+
+.mode-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 1.1em;
+}
+
+.mode-btn-addsub {
+  background: linear-gradient(180deg, var(--blue) 0%, #3b82f6 100%);
+  box-shadow: 0 6px 0 #1d4ed8;
+}
+
+.mode-btn-addsub:active {
+  box-shadow: 0 2px 0 #1d4ed8;
+}
+
 .secondary-btn {
   font-size: 1.15rem;
   font-weight: 700;
@@ -585,12 +618,36 @@ button {
   gap: 16px;
 }
 
+.stats-mode-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.stats-mode-toggle .duration-btn {
+  font-size: 1rem;
+  padding: 10px 18px;
+}
+
 .heatmap-wrap {
   width: 100%;
   background: var(--card);
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow);
+}
+
+.heatmap-title {
+  font-size: 1.1rem;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+
+.heatmap-caption {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-align: center;
 }
 
 .heatmap {
@@ -681,6 +738,11 @@ button {
 .history-date {
   font-weight: 700;
   font-size: 1.05rem;
+}
+
+.history-mode {
+  font-weight: 700;
+  color: var(--primary-dark);
 }
 
 .history-meta {

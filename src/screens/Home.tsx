@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { AppState, Duration } from '../lib/types'
+import type { AppState, Duration, GameMode } from '../lib/types'
 import { currentStreak, getHighScore } from '../lib/storage'
 import { Mascot } from '../components/Mascot'
 import { randomUnlocked, type Animal } from '../lib/animals'
@@ -8,7 +8,7 @@ import { playTap } from '../lib/audio'
 
 interface HomeProps {
   state: AppState
-  onPlay: (duration: Duration) => void
+  onPlay: (duration: Duration, mode: GameMode) => void
   onStats: () => void
   onHistory: () => void
   onGallery: () => void
@@ -19,7 +19,8 @@ export function Home({ state, onPlay, onStats, onHistory, onGallery, onToggleSou
   const [animal] = useState<Animal>(() => randomUnlocked(state))
   const [duration, setDuration] = useState<Duration>(state.settings.duration)
   const streak = currentStreak(state)
-  const highScore = getHighScore(state, duration)
+  const highMult = getHighScore(state, 'mult', duration)
+  const highAddSub = getHighScore(state, 'addsub', duration)
 
   const pick = (d: Duration) => {
     playTap()
@@ -52,10 +53,10 @@ export function Home({ state, onPlay, onStats, onHistory, onGallery, onToggleSou
 
       <h1 className="title">
         ¡Multiplica!
-        <span className="title-sub">Las tablas del 2 al 9</span>
+        <span className="title-sub">Tablas, sumas y restas</span>
       </h1>
 
-      <Mascot animal={animal} mood="happy" size={140} />
+      <Mascot animal={animal} mood="happy" size={110} />
 
       <div className="duration-picker">
         <button className={`duration-btn ${duration === 120 ? 'selected' : ''}`} onClick={() => pick(120)}>
@@ -68,18 +69,23 @@ export function Home({ state, onPlay, onStats, onHistory, onGallery, onToggleSou
 
       <div className="highscore-box">
         <Icon name="trophy" />
-        {highScore > 0 ? (
+        {highMult > 0 || highAddSub > 0 ? (
           <span>
-            Récord: <strong>{highScore}</strong> puntos
+            Récords: × <strong>{highMult}</strong> · ± <strong>{highAddSub}</strong>
           </span>
         ) : (
           <span>¡Consigue tu primer récord!</span>
         )}
       </div>
 
-      <button className="play-btn" onClick={() => onPlay(duration)}>
-        <Icon name="play" /> ¡Jugar!
-      </button>
+      <div className="mode-buttons">
+        <button className="play-btn mode-btn" onClick={() => onPlay(duration, 'mult')}>
+          <span className="mode-op">×</span> ¡Multiplicar!
+        </button>
+        <button className="play-btn mode-btn mode-btn-addsub" onClick={() => onPlay(duration, 'addsub')}>
+          <span className="mode-op">±</span> ¡Sumar y restar!
+        </button>
+      </div>
     </div>
   )
 }

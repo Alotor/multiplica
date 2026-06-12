@@ -54,9 +54,10 @@ export const ANIMALS: Animal[] = ANIMAL_INFO.map((a) => a.id)
 export const DEMO_ALL =
   typeof location !== 'undefined' && new URLSearchParams(location.search).has('demo')
 
-/** Best score the kid has achieved in any duration. */
+/** Best score the kid has achieved in any mode and duration. */
 export function bestScore(state: AppState): number {
-  return Math.max(0, ...Object.values(state.highScores))
+  const scores = Object.values(state.highScores).flatMap((byDuration) => Object.values(byDuration))
+  return Math.max(0, ...scores)
 }
 
 export function isUnlocked(info: AnimalInfo, state: AppState): boolean {
