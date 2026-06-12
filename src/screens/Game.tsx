@@ -31,6 +31,8 @@ interface Retry {
 const WRONG_FEEDBACK_MS = 2000
 const CORRECT_FEEDBACK_MS = 650
 const RETRY_GAP = 3
+// Answers slower than this earn half points and don't raise SRS strength.
+const SLOW_ANSWER_MS = 10000
 
 export function Game({ state, duration, onFinish }: GameProps) {
   const totalMs = duration * 1000
@@ -41,16 +43,10 @@ export function Game({ state, duration, onFinish }: GameProps) {
   const [answer, setAnswer] = useState('')
   const [feedback, setFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle')
   const [lastPoints, setLastPoints] = useState(0)
+  const [skipped, setSkipped] = useState(false)
 
   const [animal, setAnimal] = useState<Animal>(() => randomUnlocked(state))
-
-  // While the kid is thinking, another animal peeks in every few seconds.
-  useEffect(() => {
-    if (feedback !== 'idle') return
-    const id = setInterval(() => setAnimal((a) => randomUnlocked(state, a)), 6000)
-    return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedback])
+  const questionStartRef = useRef(Date.now())
 
   // Source of truth for session bookkeeping: timeouts and the timer callback
   // read from here, so they never see stale React state.
@@ -133,37 +129,56 @@ export function Game({ state, duration, onFinish }: GameProps) {
     }
     setAnswer('')
     setFeedback('idle')
+    setSkipped(false)
+    setAnimal((a) => randomUnlocked(state, a))
     setQuestion(makeQuestion())
+    questionStartRef.current = Date.now()
+  }
+
+  const fail = (wasSkipped: boolean) => {
+    const s = session.current
+    s.answered += 1
+    s.recent = [...s.recent.slice(-3), question.key]
+    recordAnswer(state, question.key, 'wrong', Date.now())
+    state.totals.answered += 1
+    s.streak = 0
+    s.retries.push({ key: question.key, afterAnswered: s.answered + RETRY_GAP })
+    setSkipped(wasSkipped)
+    setFeedback('wrong')
+    playWrong()
+    setTimeout(nextQuestion, WRONG_FEEDBACK_MS)
+    saveState(state)
+  }
+
+  const skip = () => {
+    if (feedback !== 'idle') return
+    fail(true)
   }
 
   const submit = () => {
     if (feedback !== 'idle' || answer === '') return
+    if (parseInt(answer, 10) !== correctAnswer) {
+      fail(false)
+      return
+    }
     const s = session.current
-    const ok = parseInt(answer, 10) === correctAnswer
+    const slow = Date.now() - questionStartRef.current > SLOW_ANSWER_MS
     s.answered += 1
     s.recent = [...s.recent.slice(-3), question.key]
-    recordAnswer(state, question.key, ok, Date.now())
+    recordAnswer(state, question.key, slow ? 'slow' : 'correct', Date.now())
     state.totals.answered += 1
-
-    if (ok) {
-      s.correct += 1
-      state.totals.correct += 1
-      s.streak += 1
-      s.bestStreak = Math.max(s.bestStreak, s.streak)
-      const pts = pointsFor(FACTS_BY_KEY[question.key], s.streak - 1)
-      s.score += pts
-      setLastPoints(pts)
-      setScore(s.score)
-      setFeedback('correct')
-      playCorrect()
-      setTimeout(nextQuestion, CORRECT_FEEDBACK_MS)
-    } else {
-      s.streak = 0
-      s.retries.push({ key: question.key, afterAnswered: s.answered + RETRY_GAP })
-      setFeedback('wrong')
-      playWrong()
-      setTimeout(nextQuestion, WRONG_FEEDBACK_MS)
-    }
+    s.correct += 1
+    state.totals.correct += 1
+    s.streak += 1
+    s.bestStreak = Math.max(s.bestStreak, s.streak)
+    const base = pointsFor(FACTS_BY_KEY[question.key], s.streak - 1)
+    const pts = slow ? Math.ceil(base / 2) : base
+    s.score += pts
+    setLastPoints(pts)
+    setScore(s.score)
+    setFeedback('correct')
+    playCorrect()
+    setTimeout(nextQuestion, CORRECT_FEEDBACK_MS)
     saveState(state)
   }
 
@@ -223,7 +238,7 @@ export function Game({ state, duration, onFinish }: GameProps) {
 
         {feedback === 'wrong' ? (
           <div className="solution">
-            <span className="solution-msg">¡Casi! Es...</span>
+            <span className="solution-msg">{skipped ? 'La respuesta es...' : '¡Casi! Es...'}</span>
             <span className="solution-eq">
               {question.left} × {question.right} = <strong>{correctAnswer}</strong>
             </span>
@@ -233,6 +248,10 @@ export function Game({ state, duration, onFinish }: GameProps) {
             {answer || ' '}
           </div>
         )}
+
+        <button className="skip-btn" onPointerDown={skip} disabled={feedback !== 'idle'}>
+          Pasar <Icon name="play" color="#8d7b72" size="0.9em" />
+        </button>
       </main>
 
       <Keypad

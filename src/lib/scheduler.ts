@@ -21,6 +21,19 @@ export function applyCorrect(stat: FactStat, now: number): FactStat {
   }
 }
 
+/**
+ * Correct but slow: the answer counts, but strength doesn't grow — the kid
+ * hasn't really got it yet, so the fact stays due and comes back soon.
+ */
+export function applySlowCorrect(stat: FactStat, now: number): FactStat {
+  return {
+    ...stat,
+    dueAt: now,
+    lastSeen: now,
+    correct: stat.correct + 1,
+  }
+}
+
 export function applyWrong(stat: FactStat, now: number): FactStat {
   return {
     ...stat,
@@ -94,8 +107,15 @@ export function pickNextFact(
   return (top[Math.min(idx, top.length - 1)] ?? candidates[0]).fact
 }
 
+export type AnswerResult = 'correct' | 'slow' | 'wrong'
+
 /** Record an answer into app state (mutates state.facts). */
-export function recordAnswer(state: AppState, key: FactKey, ok: boolean, now: number): void {
+export function recordAnswer(state: AppState, key: FactKey, result: AnswerResult, now: number): void {
   const stat = getFactStat(state, key)
-  state.facts[key] = ok ? applyCorrect(stat, now) : applyWrong(stat, now)
+  state.facts[key] =
+    result === 'correct'
+      ? applyCorrect(stat, now)
+      : result === 'slow'
+        ? applySlowCorrect(stat, now)
+        : applyWrong(stat, now)
 }

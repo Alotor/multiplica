@@ -387,6 +387,28 @@ button {
   font-size: 1.2em;
 }
 
+.skip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 8px 22px;
+  box-shadow: var(--shadow);
+  transition: transform 0.06s;
+}
+
+.skip-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.skip-btn:disabled {
+  opacity: 0.55;
+}
+
 @keyframes gentle-in {
   from { opacity: 0; transform: scale(0.85); }
   to { opacity: 1; transform: scale(1); }
