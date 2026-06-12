@@ -41,14 +41,16 @@ function Eyes({ mood }: { mood: Mood }) {
     )
   }
   if (mood === 'sad') {
+    // Inner brow ends raised + a little tear: sad, not angry.
     return (
       <g fill={INK}>
         <circle cx="43" cy="54" r="4.5" />
         <circle cx="77" cy="54" r="4.5" />
         <g stroke={INK} strokeWidth="3" strokeLinecap="round">
-          <path d="M 34 44 l 14 4" fill="none" />
-          <path d="M 86 44 l -14 4" fill="none" />
+          <path d="M 34 48 l 14 -5" fill="none" />
+          <path d="M 86 48 l -14 -5" fill="none" />
         </g>
+        <path d="M 81 60 Q 85.5 67 81 70 Q 76.5 67 81 60" fill="#7cb8f7" />
       </g>
     )
   }
